@@ -13,7 +13,8 @@ function skip_to_nl(str, idxend)
     idxend > sizeof(str) ? prevind(str, idxend) : idxend
 end
 
-tostr(buf::IOBuffer) = _unescape_string(String(take!(buf)))
+#= tostr(buf::IOBuffer) = _unescape_string(String(take!(buf))) =#
+tostr(buf::IOBuffer) = String(take!(buf))
 
 """
 parse_string_or_cmd(ps)
@@ -22,6 +23,7 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating opoerators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
+    @info ps.t
     sfullspan = ps.nt.startbyte - ps.t.startbyte
     sspan = 1 + ps.t.endbyte - ps.t.startbyte
 
@@ -47,7 +49,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             idxstart = nextind(str, idxend)
             while nextind(str, idxend) - 1 < sizeof(str)
                 c = str[nextind(str, idxend)]
-                if c == ' ' || c == '\t'
+                if c == ' ' || c == '\t' 
                     idxend += 1
                 elseif c == '\n'
                     # All whitespace lines in the middle are ignored
@@ -84,6 +86,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         input = IOBuffer(val(ps.t, ps))
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
+        #= @info "" val(ps.t, ps) input eof(input) =#
         b = IOBuffer()
         while true
             if eof(input)
@@ -95,7 +98,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 elseif istrip
                     str = tostr(b)
                     str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
-                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
+                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.TRIPLE_STRING)
                 else
                     str = tostr(b)
                     str =  str[1:prevind(str, sizeof(str))]
@@ -155,6 +158,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     end
 
+    # Everything at this point
+
     single_string_T = (Tokens.STRING,ps.t.kind)
     if istrip
         if lcp != nothing && !isempty(lcp)
@@ -177,6 +182,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         ret = ret.args[1]::LITERAL
     end
     update_span!(ret)
+    #= @info "" ret =#
 
     return ret
 end
